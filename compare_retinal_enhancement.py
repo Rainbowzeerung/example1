@@ -1,6 +1,7 @@
+ใช้พื้นที่เก็บข้อมูลไป 83% … หากพื้นที่เก็บข้อมูลเต็ม คุณจะไม่สามารถบันทึกลงในไดรฟ์ สำรองข้อมูลไปยัง Google Photos หรือใช้ Gmail รับพื้นที่เก็บข้อมูลขนาด 30 GB ในราคา ฿30 ฿15/เดือน เป็นเวลา 6 เดือน
 # fundus_enhancement_app.py
 # Retinal fundus enhancement with paper-style visualization
-# Pipeline: TV decomposition -> Visual adaptation (Nakaโ€“Rushton) -> Weighted fusion
+# Pipeline: TV decomposition -> Visual adaptation (Naka–Rushton) -> Weighted fusion
 
 import io
 import math
@@ -27,8 +28,8 @@ from matplotlib.colors import Normalize
 # ===========================
 # ====== UI CONFIG ==========
 # ===========================
-st.set_page_config(page_title="Retinal Fundus Enhancement โ€” Paper-Style", page_icon="๐ฉบ", layout="wide")
-st.title("๐ฉบ Retinal Fundus Enhancement โ€” Paper-Style Visualization")
+st.set_page_config(page_title="Retinal Fundus Enhancement — Paper-Style", page_icon="🩺", layout="wide")
+st.title("🩺 Retinal Fundus Enhancement — Paper-Style Visualization")
 st.caption("Upload a fundus image, or use the sample. Defaults match the paper; visuals explain each processing stage.")
 
 # ===========================
@@ -144,7 +145,7 @@ def tv_decompose_color(img01: np.ndarray, lam: Tuple[float, float, float], iters
     return base, detail
 
 # ==================================
-# === Global noise estimation ฮป1 ====
+# === Global noise estimation λ1 ====
 # ==================================
 NS = np.array([[1, -2, 1],
                [-2, 4, -2],
@@ -169,13 +170,13 @@ def visual_adaptation_on_base(base_rgb01: np.ndarray, n: float = 1.0):
     V = to_float01(hsv[..., 2])
     Mg = float(np.mean(V))
     Sg = float(np.std(V))
-    sigma_g = Mg / (1.0 + math.exp(Sg))  # paper's ฯ_g
+    sigma_g = Mg / (1.0 + math.exp(Sg))  # paper's σ_g
     outV = (V ** n) / ((V ** n) + (sigma_g ** n + 1e-12))
     hsv[..., 2] = np.clip(outV * 255.0, 0, 255)
     return hsv_to_rgb(hsv), V, outV, sigma_g
 
 # ==================================
-# ===== Weighted fusion (ฯ_c) ======
+# ===== Weighted fusion (ω_c) ======
 # ==================================
 def fuse_with_weights(enh_base_rgb01: np.ndarray, detail_rgb01: np.ndarray,
                       alpha_r: float, alpha_g: float, alpha_b: float, gauss_sigma: float):
@@ -205,21 +206,21 @@ with st.sidebar:
     use_paper_defaults = st.checkbox(
         "Use paper defaults",
         True,
-        help="ฮปโ=0.3, ฮฑ_R=ฮฑ_G=600, ฮฑ_B=0, Gaussian ฯ=10, n=1.0"
+        help="λ₂=0.3, α_R=α_G=600, α_B=0, Gaussian σ=10, n=1.0"
     )
 
     st.header("3) Decomposition")
     iters = st.slider("TV iterations", 20, 200, 60, 5)
-    lam2 = 0.3 if use_paper_defaults else st.slider("ฮปโ (base/detail TV)", 0.05, 1.0, 0.3, 0.01)
+    lam2 = 0.3 if use_paper_defaults else st.slider("λ₂ (base/detail TV)", 0.05, 1.0, 0.3, 0.01)
 
     st.header("4) Visual adaptation")
-    n_naka = 1.0 if use_paper_defaults else st.slider("Nakaโ€“Rushton n", 0.5, 3.0, 1.0, 0.1)
+    n_naka = 1.0 if use_paper_defaults else st.slider("Naka–Rushton n", 0.5, 3.0, 1.0, 0.1)
 
     st.header("5) Fusion weights")
-    alpha_r = 600.0 if use_paper_defaults else st.number_input("ฮฑ_R (emphasize veins)", 0.0, 2000.0, 600.0, 10.0)
-    alpha_g = 600.0 if use_paper_defaults else st.number_input("ฮฑ_G (emphasize arteries)", 0.0, 2000.0, 600.0, 10.0)
-    alpha_b = 0.0 if use_paper_defaults else st.number_input("ฮฑ_B (blue/artifacts)", 0.0, 2000.0, 0.0, 10.0)
-    gauss_sigma = 10.0 if use_paper_defaults else st.slider("Gaussian ฯ (for ฯ)", 1.0, 20.0, 10.0, 0.5)
+    alpha_r = 600.0 if use_paper_defaults else st.number_input("α_R (emphasize veins)", 0.0, 2000.0, 600.0, 10.0)
+    alpha_g = 600.0 if use_paper_defaults else st.number_input("α_G (emphasize arteries)", 0.0, 2000.0, 600.0, 10.0)
+    alpha_b = 0.0 if use_paper_defaults else st.number_input("α_B (blue/artifacts)", 0.0, 2000.0, 0.0, 10.0)
+    gauss_sigma = 10.0 if use_paper_defaults else st.slider("Gaussian σ (for ω)", 1.0, 20.0, 10.0, 0.5)
 
 # ==================================
 # ========= Load the image ==========
@@ -230,27 +231,27 @@ if f is not None:
 else:
     if use_sample_until_upload:
         rgb01 = demo_fundus()
-        st.info("No image uploaded โ€” using the built-in sample fundus. Upload a real fundus image to process it.")
+        st.info("No image uploaded — using the built-in sample fundus. Upload a real fundus image to process it.")
     else:
         st.warning("Please upload a retinal fundus image to continue.")
         st.stop()
 
 st.caption(
-    "Pipeline: (1) TV decomposition (ฮปโ noiseโ’structure) โ’ (2) TV (ฮปโ baseโ’detail) โ’ "
-    "(3) Nakaโ€“Rushton visual adaptation on luminance โ’ (4) fuse enhanced base + weighted detail (discard noise)."
+    "Pipeline: (1) TV decomposition (λ₁ noise→structure) → (2) TV (λ₂ base→detail) → "
+    "(3) Naka–Rushton visual adaptation on luminance → (4) fuse enhanced base + weighted detail (discard noise)."
 )
 
 # ==================================
 # ========== Processing =============
 # ==================================
-# STEP 1: noise vs structure using ฮปโ
+# STEP 1: noise vs structure using λ₁
 lam1_r, lam1_g, lam1_b = lambda1_global_noise(rgb01)
 structure, noise = tv_decompose_color(rgb01, (lam1_r, lam1_g, lam1_b), iters=iters)
 
-# STEP 2: base vs detail from structure (ฮปโ)
+# STEP 2: base vs detail from structure (λ₂)
 base, detail = tv_decompose_color(structure, (lam2, lam2, lam2), iters=iters)
 
-# STEP 3: visual adaptation on base (HSV.V using Nakaโ€“Rushton)
+# STEP 3: visual adaptation on base (HSV.V using Naka–Rushton)
 enh_base, V_before, V_after, sigma_g = visual_adaptation_on_base(base, n=n_naka)
 
 # STEP 4: fusion (discard noise layer) + keep weight maps
@@ -281,34 +282,34 @@ with tab_overview:
 
 # ---------- DECOMPOSITION ----------
 with tab_decomp:
-    st.markdown("**Two-stage TV decomposition**: First remove noise (ฮปโ), then split base/detail (ฮปโ).")
+    st.markdown("**Two-stage TV decomposition**: First remove noise (λ₁), then split base/detail (λ₂).")
     fig, axes = plt.subplots(2, 3, figsize=(12, 7))
     imshow_rgb(axes[0,0], rgb01, "Input RGB")
-    imshow_rgb(axes[0,1], structure, "Structure (after ฮปโ)")
+    imshow_rgb(axes[0,1], structure, "Structure (after λ₁)")
     # visualize noise magnitude
     noise_mag = np.mean(np.abs(noise), axis=2)
-    imshow_heat(axes[0,2], noise_mag, "Noise magnitude โ€–Nโ€–", cmap="magma")
+    imshow_heat(axes[0,2], noise_mag, "Noise magnitude ‖N‖", cmap="magma")
 
-    imshow_rgb(axes[1,0], base, "Base (after ฮปโ)")
+    imshow_rgb(axes[1,0], base, "Base (after λ₂)")
     # detail magnitude
     detail_mag = np.mean(np.abs(detail), axis=2)
-    imshow_heat(axes[1,1], detail_mag, "Detail magnitude โ€–Dโ€–", cmap="magma")
+    imshow_heat(axes[1,1], detail_mag, "Detail magnitude ‖D‖", cmap="magma")
     imshow_rgb(axes[1,2], enh_base, "Enhanced base (after visual adaptation)")
     plt.tight_layout()
     st.pyplot(fig, use_container_width=True)
 
 # ---------- VISUAL ADAPTATION ----------
 with tab_adapt:
-    st.markdown("**Nakaโ€“Rushton adaptation** on luminance V of HSV: "
+    st.markdown("**Naka–Rushton adaptation** on luminance V of HSV: "
                 r"$V' = \frac{V^n}{V^n + \sigma_g^n}$ "
-                f"with **n={n_naka:.2f}** and **ฯ_g={sigma_g:.4f}**.")
+                f"with **n={n_naka:.2f}** and **σ_g={sigma_g:.4f}**.")
 
     # Plot the response curve
     fig, ax = plt.subplots(figsize=(5.2, 3.5))
     v = np.linspace(0, 1, 512)
     resp = (v**n_naka) / (v**n_naka + (sigma_g**n_naka + 1e-12))
     ax.plot(v, resp, lw=2)
-    ax.set_title("Nakaโ€“Rushton Response Curve")
+    ax.set_title("Naka–Rushton Response Curve")
     ax.set_xlabel("Input luminance V")
     ax.set_ylabel("Adapted luminance V'")
     ax.grid(alpha=0.3)
@@ -345,7 +346,7 @@ with tab_fuse:
         for c, name in enumerate(["R", "G", "B"]):
             imshow_heat(axes[0,c], np.abs(detail[..., c]), f"|Detail| channel {name}", cmap="magma")
         for c, name in enumerate(["R", "G", "B"]):
-            imshow_heat(axes[1,c], weights[..., c], f"Weight ฯ_{name}", cmap="viridis")
+            imshow_heat(axes[1,c], weights[..., c], f"Weight ω_{name}", cmap="viridis")
         plt.tight_layout()
         st.pyplot(fig, use_container_width=True)
     with c2:
@@ -395,7 +396,7 @@ with tab_profiles:
 # ==================================
 buf = io.BytesIO()
 Image.fromarray(to_uint8(out)).save(buf, format="PNG")
-st.download_button("โฌ๏ธ Download enhanced PNG", data=buf.getvalue(),
+st.download_button("⬇️ Download enhanced PNG", data=buf.getvalue(),
                    file_name="fundus_enhanced.png", mime="image/png")
 
 # ==================================
